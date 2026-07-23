@@ -59,3 +59,33 @@ locals {
     }
   JSON
 }
+
+
+resource "aws_ssm_parameter" "service_config" {
+  name        = "/${var.environment}/dashboard/service-config"
+  description = "Example service configuration stored as JSON."
+  type        = "String"
+  value       = local.service_config
+
+  tags = {
+    Environment = var.environment
+    ManagedBy   = "terraform"
+  }
+}
+
+resource "aws_ssm_parameter" "feature_flags" {
+  name        = "/${var.environment}/dashboard/feature-flags"
+  description = "Example feature flags stored as JSON."
+  type        = "String"
+  value       = local.feature_flags
+
+  tags = {
+    Environment = var.environment
+    ManagedBy   = "terraform"
+  }
+}
+
+output "service_config_json" {
+  description = "The rendered service configuration JSON."
+  value       = local.service_config
+}
