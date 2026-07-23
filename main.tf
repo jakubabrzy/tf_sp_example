@@ -1,40 +1,30 @@
 terraform {
-  required_version = ">= 1.5.0"
-
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
-    }
-  }
-}
-
-provider "aws" {
-  region = var.region
-}
-
-variable "region" {
-  type        = string
-  description = "AWS region to deploy resources into."
-  default     = "eu-west-1"
+  required_version = ">= 1.4.0"
 }
 
 variable "environment" {
   type        = string
-  description = "Deployment environment."
+  description = "Deployment environment (used inside the test JSON)."
   default     = "staging"
 }
 
+variable "bump" {
+  type        = bool
+  description = "Toggle to change the JSON payload between runs."
+  default     = false
+}
+
 locals {
+  # Test data as an inline JSON object.
   service_config = jsonencode({
     name        = "dashboard-service"
     environment = var.environment
-    replicas    = 3
-    enabled     = true
-    tags        = ["frontend", "dashboard", "test"]
+    replicas    = var.bump ? 5 : 3
+    enabled     = !var.bump
+    tags        = var.bump ? ["frontend", "dashboard", "test", "eu"] : ["frontend", "dashboard", "test"]
     limits = {
       cpu    = "500m"
-      memory = "256Mi"
+      memory = var.bump ? "512Mi" : "256Mi"
     }
     endpoints = [
       {
@@ -49,43 +39,13 @@ locals {
       }
     ]
   })
-
-  feature_flags = <<-JSON
-    {
-      "newDashboard": true,
-      "betaCharts": false,
-      "maxItems": 50,
-      "rolloutRegions": ["eu-west-1", "us-east-1"]
-    }
-  JSON
 }
 
-
-resource "aws_ssm_parameter" "service_config" {
-  name        = "/${var.environment}/dashboard/service-config"
-  description = "Example service configuration stored as JSON."
-  type        = "String"
-  value       = local.service_config
-
-  tags = {
-    Environment = var.environment
-    ManagedBy   = "terraform"
-  }
-}
-
-resource "aws_ssm_parameter" "feature_flags" {
-  name        = "/${var.environment}/dashboard/feature-flags"
-  description = "Example feature flags stored as JSON."
-  type        = "String"
-  value       = local.feature_flags
-
-  tags = {
-    Environment = var.environment
-    ManagedBy   = "terraform"
-  }
+resource "terraform_data" "service_config" {
+  input = local.service_config
 }
 
 output "service_config_json" {
   description = "The rendered service configuration JSON."
-  value       = local.service_config
+  value       = jsondecode(local.service_config)
 }
