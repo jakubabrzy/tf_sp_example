@@ -19,8 +19,6 @@ locals {
   service_config = jsonencode({
     name        = "dashboard-service"
     environment = var.environment
-    replicas    = var.bump ? 5 : 3
-    enabled     = !var.bump
     tags        = var.bump ? ["frontend", "dashboard", "test", "eu"] : ["frontend", "dashboard", "test"]
     limits = {
       cpu    = "500m"
